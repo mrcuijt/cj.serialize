@@ -1,0 +1,156 @@
+<project name = "crypt-project" default = "test" basedir = ".">
+
+  <property name="src.dir" value="src/java"/>
+  <property name="test.dir" value="src/test"/>
+  <property name="build.dir" value="build"/>
+  <property name="dist.dir" value="dist"/>
+  <property name="docs.dir" value="docs"/>
+  <property name="lib.dir" value="lib"/>
+  <property name="exart.lib.dir" value="exart"/>
+
+  <taskdef name="java2html"
+      classname="de.java2html.anttasks.Java2HtmlTask"
+      classpath="${build.dir}"
+  />
+
+  <path id="build.classpath">
+    <!-- <pathelement location = "lib/junit-3.8.1.jar" /> -->
+    <fileset dir="${lib.dir}">
+      <include name="**/*.jar" />
+    </fileset>
+    <fileset dir="${exart.lib.dir}">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+
+  <path id="test.classpath">
+    <path refid="build.classpath"/>
+    <path location="${build.dir}/classes" />
+  </path>
+
+  <target name="clean">
+    <delete verbose="true" dir="${build.dir}" />
+    <delete verbose="true" dir="${docs.dir}" />
+    <delete verbose="true" dir="${dist.dir}" />
+  </target>
+
+  <target name="makedir">
+    <mkdir dir="${src.dir}/.." />
+    <mkdir dir="${src.dir}" />
+    <mkdir dir="${test.dir}" />
+    <mkdir dir="${build.dir}" />
+    <mkdir dir="${build.dir}/classes" />
+    <mkdir dir="${build.dir}/test-classes" />
+    <mkdir dir="${docs.dir}" />
+    <mkdir dir="${dist.dir}" />
+    <mkdir dir="${lib.dir}" />
+    <mkdir dir="${exart.lib.dir}" />
+  </target>
+
+  <property name="verbose" value="false"/>
+  <target name="compile" depends="clean, makedir">
+    <javac srcdir="${src.dir}"
+           destdir="${build.dir}/classes"
+           encoding="utf-8"
+           debug="true"
+           debuglevel="lines,source"
+           verbose="${verbose}">
+      <classpath refid="build.classpath"/>
+    </javac>
+    <copy todir="${build.dir}/classes">
+      <fileset dir="${src.dir}" includes="**/*.properties"/>
+    </copy>
+  </target>
+
+  <!-- Creates Javadoc -->
+  <target name="docs" depends="compile">
+    <javadoc packagenames="src" encoding="utf-8" sourcepath="${src.dir}" destdir="${docs.dir}">
+      <!-- Define which files / directory should get included, we include all -->
+       <fileset dir="${src.dir}">
+         <include name="**" />
+       </fileset>
+    </javadoc>
+  </target>
+
+  <!-- <target name="test-compile" depends="compile"> -->
+  <target name="test-compile">
+    <javac srcdir="${test.dir}"
+           destdir="${build.dir}/test-classes"
+           encoding="utf-8"
+           debug="true"
+           debuglevel="lines,source">
+      <classpath>
+        <path refid="test.classpath"/>
+      </classpath>
+    </javac>
+    <copy todir="${build.dir}">
+      <fileset dir="${src.dir}" includes="**/*.properties"/>
+    </copy>
+  </target>
+
+  <!-- Creates the deployable jar file -->
+  <target name="jar" depends="compile">
+    <jar destfile="${dist.dir}\demo.jar" basedir="${build.dir}/classes">
+      <manifest></manifest>
+    </jar>
+  </target>
+
+  <property name="run.main" value="science.mrcuijt.spider.img.SimplySpider" />
+  <property name="run.main" value="oop.basic.polymorphism.TestShape" />
+  <property name="run.main" value="test.TestTask" />
+  <target name="run" depends="">
+    <java classname="${run.main}" fork="true">
+      <arg value="proxy"/>
+      <classpath>
+        <path refid="build.classpath" />
+        <path location="${build.dir}/classes" />
+      </classpath>
+    </java>
+  </target>
+
+  <property name="run.test" value="science.mrcuijt.spider.img.TestImageSpider"/>
+  <property name="run.test" value="science.mrcuijt.spider.img.TestCImageSpider"/>
+  <property name="run.test" value="science.mrcuijt.regex.util.Regex3"/>
+  <property name="run.test" value="science.mrcuijt.spider.img.TestDownload"/>
+  <property name="run.test" value="science.mrcuijt.spider.img.TestSimplySpider"/>
+  <property name="run.test" value="science.mrcuijt.spider.bilibili.BilibiliSpiderTest" />
+  <property name="run.test" value="science.mrcuijt.util.TestRequestUtil"/>
+  <property name="run.test" value="science.mrcuijt.download.util.DownloaderUtilTest" />
+  <target name="run-test" depends="test-compile">
+    <java classname="${run.test}" fork="true">
+      <classpath>
+        <path refid="test.classpath" />
+        <path location="${build.dir}/test-classes" />
+      </classpath>
+    </java>
+  </target>
+
+  <property name="test.main" value="science.mrcuijt.download.util.DownloaderUtilTest" />
+  <property name="test.main" value="test.TestInteger" />
+  <property name="test.main" value="test.TestTask" />
+  <target name="test" depends="test-compile">
+    <junit>
+      <classpath>
+        <path refid="test.classpath" />
+        <path location="${build.dir}/test-classes" />
+      </classpath>
+      <formatter type="brief" usefile="false" />
+      <test name="${test.main}" />
+    </junit>
+  </target>
+
+  <target name="html" depends="">
+    <mkdir dir="${build.dir}" />
+    <mkdir dir="${build.dir}/html" />
+    <java2html
+           srcdir="${src.dir}"
+           destdir="${build.dir}/html"
+           includes="**/*.java"
+           style="eclipse"
+           showLineNumbers="true"
+           showFileName="true"
+           showTableBorder="true"
+    />
+  </target>
+
+</project>
