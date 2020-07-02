@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivy-module version="1.0">
+  <info organisation="cj.serialize" module="serialize" status="release"/>
+  <configurations>
+    <conf name="compile"/>
+    <conf name="test" extends="compile" />
+  </configurations>
+
+  <dependencies>
+    <!-- Test dependencies -->
+    <dependency org="junit" name="junit" rev="${junit.version}" conf="test->default"/>
+    <dependency org="org.hamcrest" name="hamcrest-core" rev="${hamcrest.version}" conf="test->default"/>
+    <dependency org="org.hamcrest" name="hamcrest-library" rev="${hamcrest.version}" conf="test->default"/>
+  </dependencies>
+</ivy-module>
