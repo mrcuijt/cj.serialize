@@ -1,4 +1,14 @@
-<project name = "crypt-project" default = "test" basedir = ".">
+<project xmlns:ivy="antlib:org.apache.ivy.ant"
+         xmlns="antlib:org.apache.tools.ant"
+         name="cj.serialize" default="test" basedir=".">
+
+  <property file="version.properties"/>
+  <property name="final.name" value="serialize-${target.serialize.version}.jar"/>
+  <property name="ivy.install.version" value="2.5.0"/>
+  <property name="ivy.home" value="${user.home}/.ivy2"/> 
+  <property name="ivy.jar.dir" value="${basedir}/ivy"/>
+  <property name="ivy.jar.file" value="${ivy.jar.dir}/ivy.jar"/>
+  <property name="ivy.settings.file" value="${basedir}/ivysettings.xml"/>
 
   <property name="src.dir" value="src/java"/>
   <property name="test.dir" value="src/test"/>
@@ -8,25 +18,46 @@
   <property name="lib.dir" value="lib"/>
   <property name="exart.lib.dir" value="exart"/>
 
+  <!-- Download java2html plugin http://www.java2html.de/download.html
+       add java2html.jar to ant/lib
+   -->
   <taskdef name="java2html"
       classname="de.java2html.anttasks.Java2HtmlTask"
       classpath="${build.dir}"
   />
 
-  <path id="build.classpath">
-    <!-- <pathelement location = "lib/junit-3.8.1.jar" /> -->
-    <fileset dir="${lib.dir}">
-      <include name="**/*.jar" />
-    </fileset>
-    <fileset dir="${exart.lib.dir}">
-      <include name="**/*.jar" />
-    </fileset>
-  </path>
+  <target name="download-ivy" unless="skip.download">
+    <mkdir dir="${ivy.jar.dir}"/>
+    <!-- download Ivy from web site so that it can be used even without any special installation -->
+    <echo message="installing ivy..."/>
+    <!-- https://repo1.maven.org/maven2 -->
+    <!-- https://maven.aliyun.com/repository/public -->
+    <get src="https://maven.aliyun.com/repository/public/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar"
+         dest="${ivy.jar.file}" usetimestamp="true"/>
+  </target>
 
-  <path id="test.classpath">
-    <path refid="build.classpath"/>
-    <path location="${build.dir}/classes" />
-  </path>
+  <target name="install-ivy" depends="download-ivy" description="--> install ivy">
+    <!-- try to load Ivy here from local Ivy dir, in case the user has not already dropped
+       it into Ant's lib dir (note that the latter copy will always take precedence).
+       We will not fail as long as local lib dir exists (it may be empty) and
+       Ivy is in at least one of Ant's lib dir or the local lib dir. -->
+    <path id="ivy.lib.path">
+      <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
+    </path>
+    <taskdef resource="org/apache/ivy/ant/antlib.xml"
+             uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+  </target>
+
+  <!-- <ivy:settings file="${user.home}/.ivy2/ivysettings-public.xml" /> -->
+  <!-- <ivy:settings file="${basedir}/ivysettings.xml" /> -->
+  <target name="resolve" depends="install-ivy" description="--> retreive dependencies with ivy">
+    <!-- conf="*" will copy artifacts defined for each conf in a dir matching conf name -->
+    <ivy:retrieve pattern="${ivy.lib.dir}/[conf]/[artifact]-[revision].[ext]"/>
+  </target>
+
+  <target name="report" depends="resolve" description="--> generates a report of dependencies">
+    <ivy:report todir="${build.dir}"/>
+  </target>
 
   <target name="clean">
     <delete verbose="true" dir="${build.dir}" />
@@ -47,15 +78,28 @@
     <mkdir dir="${exart.lib.dir}" />
   </target>
 
+  <!-- paths used for compilation and run  -->
+  <path id="compile.path.id">
+    <fileset dir="${lib.dir}/compile"/>
+  </path>
+  <path id="lib.run.test.id">
+    <path location="${build.dir}/classes"/>
+    <path location="${build.dir}/test-classes"/>
+    <fileset dir="${lib.dir}/test"/>
+  </path>
+
   <property name="verbose" value="false"/>
-  <target name="compile" depends="clean, makedir">
-    <javac srcdir="${src.dir}"
+  <target name="compile" depends="clean, makedir, resolve"
+            description="--> resolve dependencies, compile and run the project">
+    <!-- classpathref="compile.path.id" -->
+    <javac 
+           includeAntRuntime="false"
+           srcdir="${src.dir}"
            destdir="${build.dir}/classes"
            encoding="utf-8"
            debug="true"
            debuglevel="lines,source"
            verbose="${verbose}">
-      <classpath refid="build.classpath"/>
     </javac>
     <copy todir="${build.dir}/classes">
       <fileset dir="${src.dir}" includes="**/*.properties"/>
@@ -72,71 +116,27 @@
     </javadoc>
   </target>
 
-  <!-- <target name="test-compile" depends="compile"> -->
-  <target name="test-compile">
-    <javac srcdir="${test.dir}"
+  <target name="test" depends="compile">
+    <javac classpathref="lib.run.test.id"
+           includeAntRuntime="false"
+           srcdir="${test.dir}"
            destdir="${build.dir}/test-classes"
            encoding="utf-8"
            debug="true"
            debuglevel="lines,source">
-      <classpath>
-        <path refid="test.classpath"/>
-      </classpath>
     </javac>
     <copy todir="${build.dir}">
       <fileset dir="${src.dir}" includes="**/*.properties"/>
     </copy>
+    <java classpathref="lib.run.test.id"
+          classname="cj.serialize.EntitySerialTest" fork="true"></java>
   </target>
 
   <!-- Creates the deployable jar file -->
   <target name="jar" depends="compile">
-    <jar destfile="${dist.dir}\demo.jar" basedir="${build.dir}/classes">
+    <jar destfile="${dist.dir}\${final.name}" basedir="${build.dir}/classes">
       <manifest></manifest>
     </jar>
-  </target>
-
-  <property name="run.main" value="science.mrcuijt.spider.img.SimplySpider" />
-  <property name="run.main" value="oop.basic.polymorphism.TestShape" />
-  <property name="run.main" value="test.TestTask" />
-  <target name="run" depends="">
-    <java classname="${run.main}" fork="true">
-      <arg value="proxy"/>
-      <classpath>
-        <path refid="build.classpath" />
-        <path location="${build.dir}/classes" />
-      </classpath>
-    </java>
-  </target>
-
-  <property name="run.test" value="science.mrcuijt.spider.img.TestImageSpider"/>
-  <property name="run.test" value="science.mrcuijt.spider.img.TestCImageSpider"/>
-  <property name="run.test" value="science.mrcuijt.regex.util.Regex3"/>
-  <property name="run.test" value="science.mrcuijt.spider.img.TestDownload"/>
-  <property name="run.test" value="science.mrcuijt.spider.img.TestSimplySpider"/>
-  <property name="run.test" value="science.mrcuijt.spider.bilibili.BilibiliSpiderTest" />
-  <property name="run.test" value="science.mrcuijt.util.TestRequestUtil"/>
-  <property name="run.test" value="science.mrcuijt.download.util.DownloaderUtilTest" />
-  <target name="run-test" depends="test-compile">
-    <java classname="${run.test}" fork="true">
-      <classpath>
-        <path refid="test.classpath" />
-        <path location="${build.dir}/test-classes" />
-      </classpath>
-    </java>
-  </target>
-
-  <property name="test.main" value="science.mrcuijt.download.util.DownloaderUtilTest" />
-  <property name="test.main" value="test.TestInteger" />
-  <property name="test.main" value="test.TestTask" />
-  <target name="test" depends="test-compile">
-    <junit>
-      <classpath>
-        <path refid="test.classpath" />
-        <path location="${build.dir}/test-classes" />
-      </classpath>
-      <formatter type="brief" usefile="false" />
-      <test name="${test.main}" />
-    </junit>
   </target>
 
   <target name="html" depends="">

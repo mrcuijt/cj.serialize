@@ -1,1 +1,5 @@
 build/
+address.xml
+dist/
+ivy/
+lib/
